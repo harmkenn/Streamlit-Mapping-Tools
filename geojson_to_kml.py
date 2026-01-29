@@ -3,7 +3,7 @@ import geopandas as gpd
 from shapely.geometry import shape
 import json
 import tempfile
-#v2.1
+#v2.2
 st.title("🌍 Africa Country Extractor & KML Converter")
 
 st.write(
@@ -48,9 +48,30 @@ if uploaded:
         if not name_field:
             st.error("Could not find a country name field in your GeoJSON.")
         else:
+            # Filter African countries
             africa = gdf[gdf[name_field].isin(africa_countries)]
 
+            # Find missing countries
+            detected_countries = set(gdf[name_field].unique())
+            missing_countries = africa_countries - detected_countries
+
             st.success(f"Found {len(africa)} African countries.")
+            st.write(f"Missing countries: {', '.join(missing_countries)}")
+
+            # Option to add missing countries manually
+            st.write("Add missing countries manually:")
+            added_countries = st.multiselect(
+                "Select countries to add:",
+                list(missing_countries),
+                default=[]
+            )
+
+            # Add manually selected countries
+            if added_countries:
+                africa = pd.concat([
+                    africa,
+                    gdf[gdf[name_field].isin(added_countries)]
+                ])
 
             # Convert to KML using a temporary file
             with tempfile.NamedTemporaryFile(suffix=".kml") as tmp:
