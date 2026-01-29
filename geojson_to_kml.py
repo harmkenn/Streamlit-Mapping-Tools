@@ -1,0 +1,62 @@
+import streamlit as st
+import geopandas as gpd
+from shapely.geometry import shape
+import json
+import tempfile
+
+st.title("🌍 Africa Country Extractor & KML Converter")
+
+st.write(
+    "Upload a world GeoJSON file. This app will filter out only African countries "
+    "and convert the result into a downloadable KML file."
+)
+
+uploaded = st.file_uploader("Upload world GeoJSON", type=["geojson", "json"])
+
+if uploaded:
+    try:
+        # Load GeoJSON into GeoDataFrame
+        data = json.load(uploaded)
+        gdf = gpd.GeoDataFrame.from_features(data["features"])
+
+        # Normalize column names
+        gdf.columns = [c.lower() for c in gdf.columns]
+
+        # Try common continent fields
+        continent_fields = ["continent", "CONTINENT", "CONTINENT_NAME", "region_un", "region_wb"]
+        continent_field = None
+
+        for f in continent_fields:
+            if f.lower() in gdf.columns:
+                continent_field = f.lower()
+                break
+
+        if not continent_field:
+            st.error(
+                "Could not find a continent field in your GeoJSON. "
+                "Expected something like 'CONTINENT' or 'region_un'."
+            )
+        else:
+            africa = gdf[gdf[continent_field].str.contains("africa", case=False, na=False)]
+
+            st.success(f"Found {len(africa)} African countries.")
+
+            # Convert to KML using a temporary file
+            with tempfile.NamedTemporaryFile(suffix=".kml") as tmp:
+                africa.to_file(tmp.name, driver="KML")
+
+                with open(tmp.name, "rb") as f:
+                    kml_bytes = f.read()
+
+                st.download_button(
+                    label="Download Africa Countries as KML",
+                    data=kml_bytes,
+                    file_name="africa_countries.kml",
+                    mime="application/vnd.google-earth.kml+xml"
+                )
+
+            st.write("Preview of filtered data:")
+            st.dataframe(africa[[c for c in africa.columns if c != "geometry"]])
+
+    except Exception as e:
+        st.error(f"Error processing file: {e}")
