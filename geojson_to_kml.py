@@ -1,9 +1,9 @@
 import streamlit as st
 import geopandas as gpd
-from shapely.geometry import shape
 import json
 import tempfile
-#v2.2
+import pandas as pd
+#v2.3
 st.title("🌍 Africa Country Extractor & KML Converter")
 
 st.write(
@@ -35,42 +35,33 @@ if uploaded:
         # Normalize column names
         gdf.columns = [c.lower() for c in gdf.columns]
 
-        # Try to detect the name field
-        possible_name_fields = [
-            "name", "admin", "country", "cntr_name", "name_engl", "name_fren", "iso3_code"
-        ]
-        name_field = None
-        for f in possible_name_fields:
-            if f.lower() in gdf.columns:
-                name_field = f.lower()
-                break
-
-        if not name_field:
-            st.error("Could not find a country name field in your GeoJSON.")
+        # Check if NAME_ENGL exists
+        if "name_engl" not in gdf.columns:
+            st.error("Could not find the 'NAME_ENGL' field in your GeoJSON.")
         else:
-            # Filter African countries
-            africa = gdf[gdf[name_field].isin(africa_countries)]
+            # Filter African countries based on NAME_ENGL
+            africa = gdf[gdf["name_engl"].isin(africa_countries)]
 
             # Find missing countries
-            detected_countries = set(gdf[name_field].unique())
+            detected_countries = set(gdf["name_engl"].unique())
             missing_countries = africa_countries - detected_countries
 
             st.success(f"Found {len(africa)} African countries.")
             st.write(f"Missing countries: {', '.join(missing_countries)}")
 
-            # Option to add missing countries manually
-            st.write("Add missing countries manually:")
-            added_countries = st.multiselect(
+            # Option to force-select missing countries
+            st.write("Force-select missing countries to include them:")
+            selected_countries = st.multiselect(
                 "Select countries to add:",
                 list(missing_countries),
                 default=[]
             )
 
             # Add manually selected countries
-            if added_countries:
+            if selected_countries:
                 africa = pd.concat([
                     africa,
-                    gdf[gdf[name_field].isin(added_countries)]
+                    gdf[gdf["name_engl"].isin(selected_countries)]
                 ])
 
             # Convert to KML using a temporary file
