@@ -3,7 +3,7 @@ import geopandas as gpd
 from shapely.geometry import shape
 import json
 import tempfile
-
+#v2.1
 st.title("🌍 Africa Country Extractor & KML Converter")
 
 st.write(
@@ -36,7 +36,9 @@ if uploaded:
         gdf.columns = [c.lower() for c in gdf.columns]
 
         # Try to detect the name field
-        possible_name_fields = ["name", "NAME", "admin", "ADMIN", "country", "COUNTRY"]
+        possible_name_fields = [
+            "name", "admin", "country", "cntr_name", "name_engl", "name_fren", "iso3_code"
+        ]
         name_field = None
         for f in possible_name_fields:
             if f.lower() in gdf.columns:
