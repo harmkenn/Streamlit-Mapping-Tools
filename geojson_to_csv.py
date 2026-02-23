@@ -1,50 +1,46 @@
 import streamlit as st
+import geopandas as gpd
 import json
 import pandas as pd
-st.markdown("v1.1")
-def process_geojson(geojson_data):
-    """
-    Processes the GeoJSON data to extract country names and boundaries.
-    Returns a DataFrame with two columns: 'Country Name' and 'GeoJSON Boundaries'.
-    """
-    countries = []
-    boundaries = []
+from shapely.geometry import mapping
 
-    for feature in geojson_data['features']:
-        # Extract country name and geometry
-        country_name = feature['properties'].get('NAME_ENGL', 'Unknown')  # Access NAME_ENGL property
-        geometry = feature['geometry']
-        
-        # Append to lists
-        countries.append(country_name)
-        boundaries.append(json.dumps(geometry))  # Convert geometry to JSON string
+st.title("🌍 GeoJSON Country Splitter → CSV v.1.1")
 
-    # Create a DataFrame
-    df = pd.DataFrame({'Country Name': countries, 'GeoJSON Boundaries': boundaries})
-    return df
+uploaded = st.file_uploader("Upload world GeoJSON", type=["geojson", "json"])
 
-# Streamlit app
-st.title("GeoJSON to CSV Converter")
+if uploaded:
+    # Load raw JSON
+    data = json.load(uploaded)
 
-# File uploader
-uploaded_file = st.file_uploader("Upload a GeoJSON file", type=["geojson"])
+    # GeoPandas can read directly from the FeatureCollection dict
+    gdf = gpd.GeoDataFrame.from_features(
+        data["features"],
+        crs="EPSG:4326"  # your file explicitly uses EPSG:4326
+    )
 
-if uploaded_file is not None:
-    # Load the GeoJSON file
-    geojson_data = json.load(uploaded_file)
-    
-    # Process the GeoJSON data
-    df = process_geojson(geojson_data)
-    
-    # Display the DataFrame
-    st.write("Extracted Data:")
-    st.dataframe(df)
-    
-    # Download the CSV file
-    csv = df.to_csv(index=False)
+    # Validate required field
+    if "NAME_ENGL" not in gdf.columns:
+        st.error("The GeoJSON does not contain a 'NAME_ENGL' property.")
+        st.stop()
+
+    # Convert geometry to GeoJSON string
+    def geom_to_geojson(geom):
+        return json.dumps(mapping(geom))
+
+    df = pd.DataFrame({
+        "NAME_ENGL": gdf["NAME_ENGL"],
+        "geometry_geojson": gdf["geometry"].apply(geom_to_geojson)
+    })
+
+    st.success("Successfully processed the GeoJSON!")
+
+    st.dataframe(df.head())
+
+    # Download CSV
+    csv_bytes = df.to_csv(index=False).encode("utf-8")
     st.download_button(
         label="Download CSV",
-        data=csv,
-        file_name="country_boundaries.csv",
+        data=csv_bytes,
+        file_name="countries_geojson.csv",
         mime="text/csv"
     )
