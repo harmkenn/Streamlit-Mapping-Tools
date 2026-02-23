@@ -4,7 +4,7 @@ import json
 import pandas as pd
 from shapely.geometry import mapping
 
-st.title("🌍 GeoJSON Country Splitter → CSV 1.4")
+st.title("🌍 GeoJSON Country Splitter → CSV 1.5")
 
 uploaded = st.file_uploader("Upload world GeoJSON", type=["geojson", "json"])
 
@@ -49,7 +49,7 @@ if uploaded:
         "geometry_geojson": gdf["geometry"].apply(geom_to_geojson)
     })
 
-    st.dataframe(df.head())
+    st.dataframe(df)
 
     csv_bytes = df.to_csv(index=False).encode("utf-8")
     
