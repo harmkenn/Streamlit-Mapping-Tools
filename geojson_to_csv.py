@@ -12,7 +12,7 @@ def process_geojson(geojson_data):
 
     for feature in geojson_data['features']:
         # Extract country name and geometry
-        country_name = feature['properties'].get('NAME_ENGL', 'Unknown')
+        country_name = feature['properties'].get('NAME_ENGL', 'Unknown')  # Access NAME_ENGL property
         geometry = feature['geometry']
         
         # Append to lists
