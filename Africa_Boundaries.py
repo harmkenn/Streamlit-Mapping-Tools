@@ -5,8 +5,10 @@ import requests
 import zipfile
 import tempfile
 import os
+import io   # ← THIS is the missing import
 
-st.title("🌍 Africa Country Boundaries — GeoJSON Exporter (Fully Compatible) v1.3")
+
+st.title("🌍 Africa Country Boundaries — GeoJSON Exporter (Fully Compatible) v1.4")
 
 st.write("""
 This app downloads Natural Earth boundaries directly from the official source,
