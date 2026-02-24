@@ -5,7 +5,7 @@ import requests
 import zipfile
 import io
 
-st.title("🌍 Africa Country Boundaries — GeoJSON Exporter (GeoPandas 1.0 Compatible) v1.1")
+st.title("🌍 Africa Country Boundaries — GeoJSON Exporter (GeoPandas 1.0 Compatible) v1.2")
 
 st.write("""
 This app downloads Natural Earth boundaries directly from the official source,
