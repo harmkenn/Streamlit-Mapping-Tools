@@ -9,7 +9,7 @@ import os
 
 st.set_page_config(layout="wide")
 
-st.title("World Map with Merged Western Sahara and Morocco v1.8")
+st.title("World Map with Merged Western Sahara and Morocco v1.9")
 
 @st.cache_data
 def get_country_boundaries():
@@ -79,14 +79,7 @@ if world_data is not None:
             st.warning("Could not generate KML.")
         
     with col3:
-        # --- THIS IS THE FIX ---
-        # Using explicit keyword arguments for clarity and robustness.
-        st.download_button(
-           label="Download as CSV",
-           data=csv_bytes,
-           file_name="countries_with_geometry.csv",
-           mime="text/csv",
-        )
+        st.download_button(label="Download as CSV", data=csv_bytes, file_name="countries_with_geometry.csv", mime="text/csv")
     
     # --- Save to Server Section ---
     st.markdown("---")
@@ -101,8 +94,15 @@ if world_data is not None:
         except Exception as e:
             st.error(f"Failed to save file: {e}")
     
-    # --- Display Data Table ---
+    # --- NEW: Raw CSV Display Section ---
     st.markdown("---")
-    st.markdown("### Country Data Table")
-    st.write(csv_df)
-    st.dataframe(world_data[['name', 'ISO3166-1-Alpha-3']].rename(columns={'name': 'Country', 'ISO3166-1-Alpha-3': 'ISO Code'}))
+    st.header("Raw CSV Content (with full geometry)")
+    st.info("The text box below shows the raw content of the CSV file, ensuring no geometry data is truncated.")
+
+    # Decode the CSV bytes back to a string for display
+    raw_csv_text = csv_bytes.decode('utf-8')
+    
+    # Use st.code to display the raw text in a scrollable block.
+    # This prevents any truncation of the long WKT geometry strings.
+    st.code(raw_csv_text, language='text')
+
