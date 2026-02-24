@@ -3,13 +3,14 @@ import geopandas as gpd
 import json
 import requests
 import zipfile
-import io
+import tempfile
+import os
 
-st.title("🌍 Africa Country Boundaries — GeoJSON Exporter (GeoPandas 1.0 Compatible) v1.2")
+st.title("🌍 Africa Country Boundaries — GeoJSON Exporter (Fully Compatible) v1.3")
 
 st.write("""
 This app downloads Natural Earth boundaries directly from the official source,
-filters to Africa, and optionally merges Western Sahara into Morocco.
+extracts them safely, filters to Africa, and optionally merges Western Sahara into Morocco.
 """)
 
 merge_ws = st.checkbox("Merge Western Sahara into Morocco", value=True)
@@ -22,14 +23,25 @@ if st.button("Generate Africa GeoJSON"):
         st.write("Downloading Natural Earth dataset…")
         r = requests.get(url)
 
-        # Load ZIP into memory
-        z = zipfile.ZipFile(io.BytesIO(r.content))
+        # Create a temporary directory
+        tmpdir = tempfile.mkdtemp()
 
-        # Find the .shp file inside the ZIP
-        shp_path = [f for f in z.namelist() if f.endswith(".shp")][0]
+        # Extract ZIP into the temp directory
+        with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+            z.extractall(tmpdir)
 
-        # Read shapefile directly from the ZIP file object
-        world = gpd.read_file(f"zip://{shp_path}", storage_options={"fo": io.BytesIO(r.content)})
+        # Find the .shp file
+        shp_file = None
+        for f in os.listdir(tmpdir):
+            if f.endswith(".shp"):
+                shp_file = os.path.join(tmpdir, f)
+                break
+
+        if shp_file is None:
+            raise Exception("Shapefile not found inside ZIP")
+
+        # Load shapefile normally (no vsizip)
+        world = gpd.read_file(shp_file)
 
         # Filter to Africa
         africa = world[world["CONTINENT"] == "Africa"].copy()
