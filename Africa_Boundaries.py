@@ -2,48 +2,50 @@ import streamlit as st
 import geopandas as gpd
 from shapely.ops import unary_union
 
-st.markdown("v1.0")
+st.set_page_config(layout="wide")
 
-def merge_western_sahara_into_morocco(world_gdf):
-    # Filter Morocco and Western Sahara
-    morocco = world_gdf[world_gdf['NAME'] == 'Morocco']
-    western_sahara = world_gdf[world_gdf['NAME'] == 'Western Sahara']
-    
-    # Perform union operation to merge geometries
-    merged_geometry = unary_union([morocco.geometry.iloc[0], western_sahara.geometry.iloc[0]])
-    
-    # Update Morocco's geometry
-    world_gdf.loc[world_gdf['NAME'] == 'Morocco', 'geometry'] = merged_geometry
-    
-    # Remove Western Sahara from the dataset
-    world_gdf = world_gdf[world_gdf['NAME'] != 'Western Sahara']
-    
-    return world_gdf
+st.title("World Map with Merged Western Sahara and Morocco v1.0")
 
-def main():
-    st.title("World Country Boundaries with Western Sahara Merged into Morocco")
-    
-    # Load Natural Earth dataset
-    st.write("Downloading world country boundaries...")
-    world_gdf = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-    
-    # Merge Western Sahara into Morocco
-    st.write("Merging Western Sahara into Morocco...")
-    modified_gdf = merge_western_sahara_into_morocco(world_gdf)
-    
-    # Display the map
-    st.write("Modified country boundaries:")
-    st.map(modified_gdf)
-    
-    # Allow user to download the modified GeoJSON
-    st.write("Download the modified GeoJSON file:")
-    geojson_data = modified_gdf.to_json()
-    st.download_button(
-        label="Download GeoJSON",
-        data=geojson_data,
-        file_name="modified_world_boundaries.geojson",
-        mime="application/json"
-    )
+@st.cache_data
+def get_country_boundaries():
+    """
+    Fetches and processes the country boundaries.
+    Merges Western Sahara into Morocco.
+    """
+    try:
+        # URL of the GeoJSON file
+        url = "https://datahub.io/core/geo-countries/r/countries.geojson"
+        
+        # Read the GeoJSON file into a GeoDataFrame
+        world = gpd.read_file(url)
+        
+        # Identify Morocco and Western Sahara
+        morocco = world[world['ADMIN'] == 'Morocco'].geometry.squeeze()
+        western_sahara = world[world['ADMIN'] == 'Western Sahara'].geometry.squeeze()
+        
+        # Merge the geometries
+        merged_geometry = unary_union([morocco, western_sahara])
+        
+        # Update Morocco's geometry
+        world.loc[world['ADMIN'] == 'Morocco', 'geometry'] = merged_geometry
+        
+        # Remove Western Sahara
+        world = world[world['ADMIN'] != 'Western Sahara']
+        
+        return world
 
-if __name__ == "__main__":
-    main()
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+        return None
+
+world_data = get_country_boundaries()
+
+if world_data is not None:
+    st.markdown("This map displays the countries of the world. The boundary of Western Sahara has been merged into Morocco.")
+    
+    # Display the map using Streamlit's st.map()
+    st.map(world_data, color="#0000FF") # You can customize the color
+
+    st.markdown("### Country Data")
+    st.dataframe(world_data[['ADMIN', 'ISO_A3']].rename(columns={'ADMIN': 'Country', 'ISO_A3': 'ISO Code'}))
+
