@@ -9,7 +9,7 @@ import os
 
 st.set_page_config(layout="wide")
 
-st.title("World Map with Merged Western Sahara and Morocco v1.7")
+st.title("World Map with Merged Western Sahara and Morocco v1.8")
 
 @st.cache_data
 def get_country_boundaries():
