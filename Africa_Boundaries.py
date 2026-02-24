@@ -2,7 +2,7 @@ import streamlit as st
 import geopandas as gpd
 from shapely.ops import unary_union
 
-st.markdown(v1.0)
+st.markdown("v1.0")
 
 def merge_western_sahara_into_morocco(world_gdf):
     # Filter Morocco and Western Sahara
