@@ -9,7 +9,7 @@ import os
 
 st.set_page_config(layout="wide")
 
-st.title("World Map with Merged Western Sahara and Morocco v1.4")
+st.title("World Map with Merged Western Sahara and Morocco v1.5")
 
 @st.cache_data
 def get_country_boundaries():
@@ -123,4 +123,4 @@ if world_data is not None:
     
     st.markdown("---")
     st.markdown("### Country Data Table")
-    st.dataframe(world_data[['name', 'ISO3166-1-Alpha-3']].rename(columns={'name': 'Country', 'ISO3166-1-Alpha-3': 'ISO Code'}))
+    st.dataframe(csv_df)
