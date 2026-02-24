@@ -104,4 +104,5 @@ if world_data is not None:
     # --- Display Data Table ---
     st.markdown("---")
     st.markdown("### Country Data Table")
+    st.write(csv_df)
     st.dataframe(world_data[['name', 'ISO3166-1-Alpha-3']].rename(columns={'name': 'Country', 'ISO3166-1-Alpha-3': 'ISO Code'}))
