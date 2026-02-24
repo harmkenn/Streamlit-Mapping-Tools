@@ -9,7 +9,7 @@ import os
 
 st.set_page_config(layout="wide")
 
-st.title("World Map with Merged Western Sahara and Morocco v1.5")
+st.title("World Map with Merged Western Sahara and Morocco v1.6")
 
 @st.cache_data
 def get_country_boundaries():
@@ -61,66 +61,64 @@ if world_data is not None:
     
     st.markdown("---")
     
-    # --- Download Section ---
-    st.header("Download Data")
-
-    # 1. Prepare GeoJSON data (in memory)
+    # --- Data Preparation for Downloads and Saving ---
+    # 1. GeoJSON
     geojson_data = world_data.to_json()
 
-    # 2. Prepare KML data by writing to a temporary file and reading back
+    # 2. KML
     kml_data = None
     try:
         with tempfile.NamedTemporaryFile(suffix=".kml", delete=False) as tmpfile:
             tmp_path = tmpfile.name
-            # The line below that caused the error has been removed.
-            # We now write directly to the temporary file path.
             world_data.to_file(tmp_path, driver='KML')
-        
-        # Read the content of the temporary file into a variable
         with open(tmp_path, 'rb') as f:
             kml_data = f.read()
     finally:
-        # Clean up the temporary file
         if 'tmp_path' in locals() and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    # 3. Prepare CSV data (in memory)
+    # 3. CSV (both as a DataFrame and as encoded bytes for download)
     csv_df = pd.DataFrame({
         'Country': world_data['name'],
-        'GeoJSON_Geometry': world_data['geometry'].apply(lambda geom: json.dumps(geom.__geo_interface__))
+        'Geometry_WKT': world_data['geometry'].to_wkt()
     })
-    csv_data = csv_df.to_csv(index=False).encode('utf-8')
+    csv_bytes = csv_df.to_csv(index=False).encode('utf-8')
 
-    # Create columns for download buttons
+    # --- Download Section ---
+    st.header("Download Data to Your Computer")
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.download_button(
-            label="Download as GeoJSON",
-            data=geojson_data,
-            file_name="countries_merged.geojson",
-            mime="application/json",
-        )
+        st.download_button("Download as GeoJSON", geojson_data, "countries_merged.geojson", "application/json")
     
     with col2:
-        if kml_data: # Only show button if KML data was created successfully
-            st.download_button(
-                label="Download as KML",
-                data=kml_data,
-                file_name="countries_merged.kml",
-                mime="application/vnd.google-earth.kml+xml",
-            )
+        if kml_data:
+            st.download_button("Download as KML", kml_data, "countries_merged.kml", "application/vnd.google-earth.kml+xml")
         else:
-            st.warning("Could not generate KML file.")
+            st.warning("Could not generate KML.")
         
     with col3:
-        st.download_button(
-           label="Download as CSV with Geometry",
-           data=csv_data,
-           file_name="countries_with_geometry.csv",
-           mime="text/csv",
-        )
+        st.download_button("Download as CSV", csv_bytes, "countries_with_geometry.csv", "text/csv")
     
+    # --- NEW: Save to Server Section ---
+    st.markdown("---")
+    st.header("Save CSV on the Server")
+
+    # Define the output filename and path
+    output_filename = "countries_with_geometry.csv"
+    # Get the absolute path of the directory where the script is running
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(script_dir, output_filename)
+
+    if st.button(f"Save CSV to App Folder"):
+        try:
+            # Use the pandas DataFrame to save the file directly to the calculated path
+            csv_df.to_csv(output_path, index=False)
+            st.success(f"Successfully saved file to: {output_path}")
+        except Exception as e:
+            st.error(f"Failed to save file: {e}")
+    
+    # --- Display Data Table ---
     st.markdown("---")
     st.markdown("### Country Data Table")
-    st.dataframe(csv_df)
+    st.dataframe(world_data[['name', 'ISO3166-1-Alpha-3']].rename(columns={'name': 'Country', 'ISO3166-1-Alpha-3': 'ISO Code'}))
