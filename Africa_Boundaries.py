@@ -9,7 +9,7 @@ import os
 
 st.set_page_config(layout="wide")
 
-st.title("World Map with Merged Western Sahara and Morocco v1.6")
+st.title("World Map with Merged Western Sahara and Morocco v1.7")
 
 @st.cache_data
 def get_country_boundaries():
@@ -43,29 +43,17 @@ if world_data is not None:
 
     # --- Pydeck Map Visualization ---
     view_state = pdk.ViewState(latitude=20, longitude=0, zoom=1.2, pitch=0)
-    geojson_layer = pdk.Layer(
-        "GeoJsonLayer",
-        data=world_data,
-        get_fill_color="[70, 130, 180, 160]",
-        get_line_color=[255, 255, 255],
-        pickable=True, stroked=True, filled=True,
-        line_width_min_pixels=1,
-    )
-    deck = pdk.Deck(
-        layers=[geojson_layer],
-        initial_view_state=view_state,
-        map_style="mapbox://styles/mapbox/light-v9",
-        tooltip={"text": "Country: {name}"}
-    )
+    geojson_layer = pdk.Layer("GeoJsonLayer", data=world_data, get_fill_color="[70, 130, 180, 160]", get_line_color=[255, 255, 255], pickable=True, stroked=True, filled=True, line_width_min_pixels=1)
+    deck = pdk.Deck(layers=[geojson_layer], initial_view_state=view_state, map_style="mapbox://styles/mapbox/light-v9", tooltip={"text": "Country: {name}"})
     st.pydeck_chart(deck)
     
     st.markdown("---")
     
-    # --- Data Preparation for Downloads and Saving ---
-    # 1. GeoJSON
+    # --- Data Preparation ---
     geojson_data = world_data.to_json()
-
-    # 2. KML
+    csv_df = pd.DataFrame({'Country': world_data['name'], 'Geometry_WKT': world_data['geometry'].to_wkt()})
+    csv_bytes = csv_df.to_csv(index=False).encode('utf-8')
+    
     kml_data = None
     try:
         with tempfile.NamedTemporaryFile(suffix=".kml", delete=False) as tmpfile:
@@ -77,42 +65,37 @@ if world_data is not None:
         if 'tmp_path' in locals() and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    # 3. CSV (both as a DataFrame and as encoded bytes for download)
-    csv_df = pd.DataFrame({
-        'Country': world_data['name'],
-        'Geometry_WKT': world_data['geometry'].to_wkt()
-    })
-    csv_bytes = csv_df.to_csv(index=False).encode('utf-8')
-
     # --- Download Section ---
     st.header("Download Data to Your Computer")
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.download_button("Download as GeoJSON", geojson_data, "countries_merged.geojson", "application/json")
+        st.download_button(label="Download as GeoJSON", data=geojson_data, file_name="countries_merged.geojson", mime="application/json")
     
     with col2:
         if kml_data:
-            st.download_button("Download as KML", kml_data, "countries_merged.kml", "application/vnd.google-earth.kml+xml")
+            st.download_button(label="Download as KML", data=kml_data, file_name="countries_merged.kml", mime="application/vnd.google-earth.kml+xml")
         else:
             st.warning("Could not generate KML.")
         
     with col3:
-        st.download_button("Download as CSV", csv_bytes, "countries_with_geometry.csv", "text/csv")
+        # --- THIS IS THE FIX ---
+        # Using explicit keyword arguments for clarity and robustness.
+        st.download_button(
+           label="Download as CSV",
+           data=csv_bytes,
+           file_name="countries_with_geometry.csv",
+           mime="text/csv",
+        )
     
-    # --- NEW: Save to Server Section ---
+    # --- Save to Server Section ---
     st.markdown("---")
     st.header("Save CSV on the Server")
-
-    # Define the output filename and path
     output_filename = "countries_with_geometry.csv"
-    # Get the absolute path of the directory where the script is running
     script_dir = os.path.dirname(os.path.abspath(__file__))
     output_path = os.path.join(script_dir, output_filename)
-
     if st.button(f"Save CSV to App Folder"):
         try:
-            # Use the pandas DataFrame to save the file directly to the calculated path
             csv_df.to_csv(output_path, index=False)
             st.success(f"Successfully saved file to: {output_path}")
         except Exception as e:
