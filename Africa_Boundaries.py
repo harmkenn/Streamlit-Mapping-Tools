@@ -2,10 +2,12 @@ import streamlit as st
 import geopandas as gpd
 from shapely.ops import unary_union
 import pydeck as pdk
+import pandas as pd
+import json
 
 st.set_page_config(layout="wide")
 
-st.title("World Map with Merged Western Sahara and Morocco v1.2")
+st.title("World Map with Merged Western Sahara and Morocco v1.3")
 
 @st.cache_data
 def get_country_boundaries():
@@ -42,44 +44,82 @@ def get_country_boundaries():
         st.error(f"An error occurred during data processing: {e}")
         return None
 
+# Get the main data
 world_data = get_country_boundaries()
 
 if world_data is not None:
     st.markdown("This map displays the countries of the world. The boundary of Western Sahara has been merged into Morocco.")
 
     # --- Pydeck Map Visualization ---
-    
-    # 1. Set the initial view for the map
-    view_state = pdk.ViewState(
-        latitude=20,  # Center the map view
-        longitude=0,
-        zoom=1.2,
-        pitch=0,
-    )
-
-    # 2. Define the layer for the country polygons
+    view_state = pdk.ViewState(latitude=20, longitude=0, zoom=1.2, pitch=0)
     geojson_layer = pdk.Layer(
         "GeoJsonLayer",
         data=world_data,
-        get_fill_color="[70, 130, 180, 160]",  # SteelBlue with some transparency
+        get_fill_color="[70, 130, 180, 160]",
         get_line_color=[255, 255, 255],
-        pickable=True,  # Allow hovering to see tooltips
+        pickable=True,
         stroked=True,
         filled=True,
         line_width_min_pixels=1,
     )
-
-    # 3. Create the Deck object with the layer and view
     deck = pdk.Deck(
         layers=[geojson_layer],
         initial_view_state=view_state,
         map_style="mapbox://styles/mapbox/light-v9",
-        tooltip={"text": "Country: {name}"} # Add a tooltip to show country name on hover
+        tooltip={"text": "Country: {name}"}
     )
-
-    # 4. Render the pydeck chart in Streamlit
     st.pydeck_chart(deck)
-    # --- End of Pydeck Map ---
+    
+    st.markdown("---") # Separator
+    
+    # --- Download Section ---
+    st.header("Download Data")
 
-    st.markdown("### Country Data")
+    # 1. Prepare data for GeoJSON download
+    geojson_data = world_data.to_json()
+
+    # 2. Prepare data for KML download
+    # To write to KML, we need to enable the KML driver in fiona (used by geopandas)
+    gpd.io.file.fiona.drvsupport.supported_drivers['KML'] = 'rw'
+    kml_data = world_data.to_file(driver='KML', pretty=True, index=False)
+
+    # 3. Prepare data for CSV with GeoJSON geometry
+    # Create a new DataFrame with country name and geometry as a JSON string
+    csv_df = pd.DataFrame({
+        'Country': world_data['name'],
+        'GeoJSON_Geometry': world_data['geometry'].apply(lambda geom: json.dumps(geom.__geo_interface__))
+    })
+    csv_data = csv_df.to_csv(index=False).encode('utf-8')
+
+    # Create columns for download buttons
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.download_button(
+            label="Download as GeoJSON",
+            data=geojson_data,
+            file_name="countries_merged.geojson",
+            mime="application/json",
+        )
+    
+    with col2:
+        st.download_button(
+            label="Download as KML",
+            data=kml_data,
+            file_name="countries_merged.kml",
+            mime="application/vnd.google-earth.kml+xml",
+        )
+        
+    with col3:
+        st.download_button(
+           label="Download as CSV with Geometry",
+           data=csv_data,
+           file_name="countries_with_geometry.csv",
+           mime="text/csv",
+        )
+    
+    # --- Display Data Table ---
+    st.markdown("---") # Separator
+    st.markdown("### Country Data Table")
     st.dataframe(world_data[['name', 'ISO3166-1-Alpha-3']].rename(columns={'name': 'Country', 'ISO3166-1-Alpha-3': 'ISO Code'}))
+
