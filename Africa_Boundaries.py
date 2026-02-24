@@ -2,9 +2,10 @@ import streamlit as st
 import geopandas as gpd
 import json
 import requests
-from shapely.ops import unary_union
+import zipfile
+import io
 
-st.title("🌍 Africa Country Boundaries — GeoJSON Exporter (Updated for GeoPandas 1.0+)")
+st.title("🌍 Africa Country Boundaries — GeoJSON Exporter (GeoPandas 1.0 Compatible) v1.1")
 
 st.write("""
 This app downloads Natural Earth boundaries directly from the official source,
@@ -21,12 +22,14 @@ if st.button("Generate Africa GeoJSON"):
         st.write("Downloading Natural Earth dataset…")
         r = requests.get(url)
 
-        # Save ZIP to memory
-        with open("ne_countries.zip", "wb") as f:
-            f.write(r.content)
+        # Load ZIP into memory
+        z = zipfile.ZipFile(io.BytesIO(r.content))
 
-        # Load with GeoPandas
-        world = gpd.read_file("zip://ne_countries.zip")
+        # Find the .shp file inside the ZIP
+        shp_path = [f for f in z.namelist() if f.endswith(".shp")][0]
+
+        # Read shapefile directly from the ZIP file object
+        world = gpd.read_file(f"zip://{shp_path}", storage_options={"fo": io.BytesIO(r.content)})
 
         # Filter to Africa
         africa = world[world["CONTINENT"] == "Africa"].copy()
