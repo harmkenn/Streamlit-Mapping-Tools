@@ -13,6 +13,7 @@ def home():
     st.info("**GeoJSON to KML**: Extract African countries and convert to KML.")
     st.info("**Merge Polygons**: Merge adjacent GeoJSON polygons (Dissolve).")
     st.info("**GeoJSON to CSV**: Split GeoJSON countries into CSV format.")
+    st.info("**KMZ to KML**: Split GeoJSON countries into CSV format.")
     
     st.markdown("### 🎵 Utilities")
     st.success("**Spotify Extractor**: Get song URLs from playlists.")
@@ -27,6 +28,7 @@ pages = {
         st.Page("geojson_to_kml.py", title="GeoJSON to KML", icon="🗺️"),
         st.Page("merge_polygons.py", title="Merge Polygons", icon="🧩"),
         st.Page("geojson_to_csv.py", title="GeoJSON to CSV", icon="📄"),
+        st.Page("kmz_to_kml.py", title="GeoJSON to CSV", icon="📄"),
     ],
     "Utilities": [
         st.Page("spotify_downloader.py", title="Spotify Extractor", icon="🎵"),
